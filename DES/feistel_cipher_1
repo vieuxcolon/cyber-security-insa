@@ -1,0 +1,44 @@
+import os
+
+def xor(a, b):
+    return bytes(x ^ y for x, y in zip(a, b))
+
+def feistel_round(L, R, K):
+    # Simple round function F: XOR with subkey
+    new_L = R
+    new_R = xor(L, K)
+    return new_L, new_R
+
+def feistel_encrypt(plaintext, key, rounds=4):
+    # Pad plaintext to even length
+    if len(plaintext) % 2 != 0:
+        plaintext += b'\0'
+    
+    L = plaintext[:len(plaintext)//2]
+    R = plaintext[len(plaintext)//2:]
+    
+    for _ in range(rounds):
+        L, R = feistel_round(L, R, key)
+    
+    return R + L  # Swap halves for final ciphertext
+
+def feistel_decrypt(ciphertext, key, rounds=4):
+    R = ciphertext[:len(ciphertext)//2]
+    L = ciphertext[len(ciphertext)//2:]
+    
+    for _ in range(rounds):
+        L, R = feistel_round(L, R, key)
+    
+    return L + R
+
+# Exercise 2: Test Feistel Cipher with Random Key
+
+# Generate random 8-byte key
+key = os.urandom(8)
+plaintext = b"HelloWorld"
+
+ciphertext = feistel_encrypt(plaintext, key)
+print("Ciphertext:", ciphertext)
+
+decrypted = feistel_decrypt(ciphertext, key)
+print("Decrypted:", decrypted.strip(b'\0'))  # Remove padding

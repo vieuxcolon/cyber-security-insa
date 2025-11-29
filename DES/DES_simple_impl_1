@@ -1,0 +1,122 @@
+import os
+
+
+def xor(a, b):
+    return bytes(x ^ y for x, y in zip(a, b))
+
+
+def feistel_round(L, R, K):
+    # Simple round function F: XOR with subkey
+    new_L = R
+    new_R = xor(L, K)
+    return new_L, new_R
+
+
+def feistel_encrypt(plaintext, key, rounds=4):
+    # Pad plaintext to even length
+    if len(plaintext) % 2 != 0:
+        plaintext += b"\0"
+
+    L = plaintext[: len(plaintext) // 2]
+    R = plaintext[len(plaintext) // 2 :]
+
+    for _ in range(rounds):
+        L, R = feistel_round(L, R, key)
+
+    return R + L  # Swap halves for final ciphertext
+
+
+def feistel_decrypt(ciphertext, key, rounds=4):
+    R = ciphertext[: len(ciphertext) // 2]
+    L = ciphertext[len(ciphertext) // 2 :]
+
+    for _ in range(rounds):
+        L, R = feistel_round(L, R, key)
+
+    return L + R
+
+
+# Exercise 2: Test Feistel Cipher with Random Key
+
+# Generate random 8-byte key
+key = os.urandom(8)
+plaintext = b"HelloWorld"
+
+ciphertext = feistel_encrypt(plaintext, key)
+print("Ciphertext:", ciphertext)
+
+decrypted = feistel_decrypt(ciphertext, key)
+print("Decrypted:", decrypted.strip(b"\0"))  # Remove padding
+
+# Exercise 3: Implement DES (Simplified)
+
+from bitarray import bitarray
+
+# Example: define DES tables (PC1, PC2, S-boxes, etc.) here
+# For brevity, not included fully in this snippet
+
+
+def des_round(L, R, K):
+    # Expansion, XOR with K, S-box substitution, P-box permutation
+    # Simplified: just XOR for demonstration
+    new_L = R
+    new_R = xor_bytes(L, K)
+    return new_L, new_R
+
+
+def des_encrypt_block(block, subkeys):
+    L = block[:32]
+    R = block[32:]
+    for K in subkeys:
+        L, R = des_round(L, R, K)
+    return R + L  # Final swap
+
+
+# Exercise 4: Performance Analysis
+import time
+
+sizes = [2**i for i in range(10, 27)]
+times = []
+
+for size in sizes:
+    plaintext = os.urandom(size)
+    start = time.time()
+    feistel_encrypt(plaintext, key)
+    times.append(time.time() - start)
+
+for size, t in zip(sizes, times):
+    print(f"Size: {size} bytes, Encryption time: {t:.6f} s")
+
+# Exercise 5: Use Python’s DES Implementation
+
+from Crypto.Cipher import DES
+from Crypto.Random import get_random_bytes
+
+key = get_random_bytes(8)
+cipher = DES.new(key, DES.MODE_ECB)
+plaintext = b"HelloWorld12345"  # Multiple of 8 bytes
+
+ciphertext = cipher.encrypt(plaintext.ljust(16, b"\0"))
+deciphered = cipher.decrypt(ciphertext).rstrip(b"\0")
+
+print("Ciphertext:", ciphertext)
+print("Deciphered:", deciphered)
+
+# Exercise 6: Frequency Analysis
+
+from collections import Counter
+
+# Simple substitution cipher example: Caesar
+def caesar_encrypt(text, shift=3):
+    return ''.join(chr((ord(c)-65 + shift) % 26 + 65) if c.isupper() else c for c in text)
+
+text = "THIS IS A SAMPLE ENGLISH TEXT FOR FREQUENCY ANALYSIS"
+cipher_text = caesar_encrypt(text)
+freq = Counter(c for c in cipher_text if c.isalpha())
+print(freq)
+
+# Compare with DES ciphertext
+cipher = DES.new(get_random_bytes(8), DES.MODE_ECB)
+des_ciphertext = cipher.encrypt(text.encode().ljust(64, b'\0'))
+des_freq = Counter(des_ciphertext)
+print(des_freq)
